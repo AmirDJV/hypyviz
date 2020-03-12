@@ -12,11 +12,11 @@ import sys
 
 ###inputs
 
-p1=np.array([0,0,0]) #first point
-p2=np.array([1,1,1])  #second point
+p1 = np.array([0,0,0]) #first point
+p2 = np.array([1,1,1])  #second point
 
-p1=np.array([-0.0294367,  0.0839171, -0.00699]) #first point
-p2=np.array([0.0502438, 0.1968888, 0.042192])  #second point
+p1 = np.array([-0.0294367,  0.0839171, -0.00699]) #first point
+p2 = np.array([0.0502438, 0.1968888, 0.042192])  #second point
 
 #p1=np.random.uniform(0,20,(3)) #first point
 #p2=np.random.uniform(0,20,(3)) #second point

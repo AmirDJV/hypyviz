@@ -66,6 +66,99 @@ del cap1_locations, cap2_locations, old, new, newX, newY, rotZ, translate
 #############################Start of viz######################################
 ###############################################################################
 
+########################Temp Idea for curves##########################
+
+import numpy as np
+from scipy import interpolate
+import mayavi.mlab as mlab
+from scipy import linalg, stats
+
+
+#Plot EEG cap with electrode names 
+fig = mlab.figure(size=(600, 600), bgcolor=(0.5, 0.5, 0.5))
+points = mlab.points3d(sens_loc[:, 0], sens_loc[:, 1], sens_loc[:, 2],
+                  color=(1, 1, 1), opacity=1, scale_factor=0.005,
+                  figure=fig)
+
+nodes_shown = list(range(0, 62))
+
+chNames = []
+#Changing channels name as letters -M / -F
+for i, c in enumerate(combined.info["ch_names"]):
+    if c[-1] == "0":
+        chNames.append(c[:-1] + "M")
+    elif c[-1] == "1":
+        chNames.append(c[:-1] + "F")
+
+#Channels name as letters -M / -F
+picks = np.array(list(range(0, len(chNames))))
+
+for node in nodes_shown:
+    x, y, z = sens_loc[node]
+    mlab.text3d(x, y, z, chNames[picks[node]],
+                scale=0.005,
+                color=(0, 0, 0))
+
+
+#Start of ploting the lines between electrodes. 
+#I cannot show the lines on the same plot. 
+
+#This will probably be in loop 
+###inputs
+
+p1 = sens_loc[0] #starting point 
+p2 = sens_loc[35] #end point
+npts = 100 # number of points to sample between the start/end
+
+#creating data to connect the dots 
+y = np.array([0,.5,.75,.75,.5,0]) #describe shape in 1d 
+amp = 5 #curve height factor. bigger means heigher 
+
+#get the adder. This will be used to raise the z coords
+x = np.arange(y.size)
+xnew = np.linspace(x[0],x[-1] , npts) #sample the x coord
+tck = interpolate.splrep(x,y,s=0) 
+adder = interpolate.splev(xnew,tck,der=0)*amp
+adder[0] = adder[-1] = 0
+adder = adder.reshape((-1,1))
+
+#get a line between points
+shape3 = np.vstack([np.linspace(p1[dim],p2[dim],npts) for dim in range(3)]).T
+
+#raise the z coordinate
+shape3[:,-1] = shape3[:,-1] + adder[:,-1]
+
+#plot
+x, y, z = (shape3[:,dim] for dim in range(3))
+mlab.points3d(x, y, z, color=(0,0,0))
+mlab.plot3d(x,y,z,tube_radius=0.1)
+
+
+
+
+
+####parts to ignore / scramble attempts / mess / bits and pieces
+
+for xi, yi, zi in zip(x, y, z):
+    lines = mlab.plot3d([xi, xi], [yi, yi], [zi, zi], [val, val],
+                             vmin=vmin, vmax=vmax, tube_radius=0.2, #color features
+                             colormap='blue-red')
+    lines.module_manager.scalar_lut_manager.reverse_lut = True
+
+
+#For straight lines
+vmax = np.max(con_val)
+vmin = np.min(con_val)
+for val, nodes in zip(con_val, con_nodes):
+    x1, y1, z1 = sens_loc[nodes[0]]
+    x2, y2, z2 = sens_loc[nodes[1]]
+    lines = mlab.plot3d([x1, x2], [y1, y2], [z1, z2], [val, val],
+                             vmin=vmin, vmax=vmax, tube_radius=0.0002, #color features
+                             colormap='blue-red')
+    lines.module_manager.scalar_lut_manager.reverse_lut = True
+
+
+
 ##Calculate connectivity for single cap
 from mne.channels import find_ch_connectivity
 
@@ -100,54 +193,8 @@ for e1 in range(62):
 import matplotlib.pyplot as plt
 plt.spy(con)
 
-########################Temp Idea for curves##########################
 
-import numpy as np
-from scipy import interpolate
-from mayavi import mlab
 
-#This will probably be in loop 
-###inputs
-p1 = sens_loc[0] #first point
-p2 = sens_loc[35] #second point
-npts = 100 # number of points to sample
-
-p1, p2
-
-y = np.array([0,.5,.75,.75,.5,0]) #describe shape in 1d 
-amp = 5 #curve height factor. bigger means heigher 
-
-#get the adder. This will be used to raise the z coords
-x = np.arange(y.size)
-xnew = np.linspace(x[0],x[-1] , npts) #sample the x coord
-tck = interpolate.splrep(x,y,s=0) 
-adder = interpolate.splev(xnew,tck,der=0)*amp
-adder[0] = adder[-1] = 0
-adder = adder.reshape((-1,1))
-
-#get a line between points
-shape3 = np.vstack([np.linspace(p1[dim],p2[dim],npts) for dim in range(3)]).T
-
-#raise the z coordinate
-shape3[:,-1] = shape3[:,-1] + adder[:,-1]
-
-#plot
-x, y, z = (shape3[:,dim] for dim in range(3))
-mlab.points3d(x, y, z, color=(0,0,0))
-mlab.plot3d(x,y,z,tube_radius=0.2)
-#mlab.outline()
-#mlab.axes()
-#mlab.show()
-
-i = 1
-
-import mayavi.mlab as mlab
-from scipy import linalg, stats
-
-fig = mlab.figure(size=(600, 600), bgcolor=(0.5, 0.5, 0.5))
-points = mlab.points3d(sens_loc[:, 0], sens_loc[:, 1], sens_loc[:, 2],
-                  color=(1, 1, 1), opacity=1, scale_factor=0.005,
-                  figure=fig)
 
 #######
 # Get the strongest connections
@@ -177,34 +224,6 @@ for val, nodes in zip(con_val, con_nodes):
                              vmin=vmin, vmax=vmax, tube_radius=0.0002,
                              colormap='blue-red')
     lines.module_manager.scalar_lut_manager.reverse_lut = True
-
-
-## Add the sensor names for the connections shown
-#nodes_shown = list(set([n[0] for n in con_nodes] +
-#                       [n[1] for n in con_nodes]))
-
-nodes_shown = list(range(0, 62))
-
-chNames = []
-#Changing channels name as letters -M / -F
-for i, c in enumerate(combined.info["ch_names"]):
-    if c[-1] == "0":
-        chNames.append(c[:-1] + "M")
-    elif c[-1] == "1":
-        chNames.append(c[:-1] + "F")
-
-#Channels name as letters -M / -F
-picks = np.array(list(range(0, len(chNames))))
-
-for node in nodes_shown:
-    x, y, z = sens_loc[node]
-    mlab.text3d(x, y, z, chNames[picks[node]],
-                scale=0.005,
-                color=(0, 0, 0))
-
-
-
-
 
 
 
